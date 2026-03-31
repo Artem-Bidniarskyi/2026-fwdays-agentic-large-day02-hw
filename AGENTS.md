@@ -10,7 +10,7 @@ The app (`excalidraw-app/`) is a **host** around the embeddable library — it c
 
 ### Package Dependency Graph
 
-```
+```text
 @excalidraw/common     (no internal deps)
         ↑
 @excalidraw/math       (depends on common)
@@ -62,13 +62,21 @@ yarn build             # Full production build (app + version stamp)
 yarn clean-install     # rm node_modules + yarn install (does NOT clean examples/*)
 ```
 
+## Tech Stack
+
+- **React** 19.0.0
+- **TypeScript** 5.9.3 (strict mode, ESNext target)
+- **Vite** (web app bundler)
+- **esbuild** (library package bundler)
+- **Yarn workspaces** (Yarn 1.22.22)
+- **Vitest** 3.0.6 (unit/component testing, jsdom environment)
+- **Node** >=18.0.0
+
 ## Environment
 
-- **Node**: >=18.0.0 (CI uses 20.x)
-- **Package Manager**: Yarn 1.22.22 (1.x) with workspaces
-- **React**: 19.0.0 (library peers: `^17.0.2 || ^18.2.0 || ^19.0.0`)
-- **TypeScript**: 5.9.3, strict mode, ESNext target
-- **Test Framework**: Vitest 3.0.6 with jsdom environment
+- **Node CI version**: 20.x
+- **Package Manager**: Yarn 1.22.22 (1.x classic) with workspaces
+- **React peer range**: `^17.0.2 || ^18.2.0 || ^19.0.0`
 - **Git hooks**: Husky 7.0.4 + lint-staged 12.3.7
 
 ## Architecture
