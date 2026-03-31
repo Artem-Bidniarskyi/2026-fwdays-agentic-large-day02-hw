@@ -115,7 +115,7 @@ yarn clean-install     # rm node_modules + yarn install (does NOT clean examples
 - Coverage thresholds: 60% lines, 70% branches, 63% functions, 60% statements
 - Snapshots used extensively — run `yarn test:update` after visual/structural changes
 
-## Code Style
+## Conventions
 
 - Functional components preferred (`App.tsx` is the class component exception)
 - PascalCase for components (`Avatar.tsx`), camelCase/kebab-case for utilities (`appState.ts`, `editor-jotai.ts`)
