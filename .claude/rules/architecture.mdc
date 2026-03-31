@@ -1,0 +1,47 @@
+---
+description: "Architecture constraints for Excalidraw"
+globs: packages/excalidraw/**
+alwaysApply: false
+---
+
+# Excalidraw Architecture
+
+## State Management
+
+- Jotai atoms for global state (editor-jotai.ts) — NOT Redux/Zustand/MobX
+- ActionManager (actions/manager.tsx) as command dispatcher for user actions
+- State updates: actionManager.executeAction() or Jotai useSetAtom()
+- State type: AppState (packages/excalidraw/types.ts)
+- Default state: getDefaultAppState() in appState.ts
+
+## Rendering
+
+- Two-layer HTML5 Canvas 2D rendering — NOT React DOM for drawing
+  - StaticCanvas: renders static elements via renderStaticScene()
+  - InteractiveCanvas: handles pointer events, selection via renderInteractiveScene()
+  - NewElementCanvas: renders elements being created in real-time
+- RoughJS for hand-drawn sketch aesthetic
+- Scene class (packages/element/src/Scene.ts) manages element arrays/maps
+- DO NOT use react-konva, fabric.js, pixi.js
+
+## Monorepo Structure
+
+- packages/excalidraw/ — main editor library (App.tsx is the core component)
+- packages/element/ — element definitions, Scene class
+- packages/math/ — mathematical utilities
+- packages/common/ — shared utilities, constants, types
+- packages/utils/ — export utilities, shape helpers
+- excalidraw-app/ — standalone web application
+
+## Dependencies
+
+- No new npm packages without explicit approval
+- Check packages/common/ and packages/utils/ before adding external helpers
+- Key deps: React 19, Jotai, RoughJS, Vite, Vitest
+
+## How to verify
+
+- `grep -r "from 'redux\|from 'zustand\|from 'mobx" packages/` — must return nothing
+- `grep -r "react-konva\|fabric\.js\|pixi\.js" packages/` — must return nothing
+- `yarn test:typecheck` — confirms no type errors from state/render changes
+- `yarn test:app --watch=false` — confirms rendering pipeline still works

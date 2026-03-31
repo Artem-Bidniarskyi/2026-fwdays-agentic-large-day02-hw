@@ -1,0 +1,49 @@
+---
+description: "Code conventions for Excalidraw components and utilities"
+globs: packages/**/*.ts,packages/**/*.tsx
+alwaysApply: false
+---
+
+# Code Conventions
+
+## Components
+
+- Functional components + hooks preferred (App.tsx is the notable class component exception)
+- Props: `interface` when extending HTML/React types, `type` for simple prop objects
+- Named exports preferred; default exports used for main/complex components (e.g., App, LayerUI, ConfirmDialog)
+- Colocated styles: `ComponentName.scss` alongside component file
+
+## TypeScript
+
+- Strict mode enabled — minimize `any`, avoid `@ts-ignore`
+- Use `import type { X } from "..."` for type-only imports
+- Path aliases for cross-package imports: `@excalidraw/common`, `@excalidraw/element`, `@excalidraw/utils`
+- Relative imports for within-package references
+
+## File Naming
+
+- PascalCase for components: `Avatar.tsx`, `LayerUI.tsx`, `Sidebar.tsx`
+- camelCase/kebab-case for utilities: `appState.ts`, `editor-jotai.ts`, `animated-trail.ts`
+- PascalCase for component folders: `ColorPicker/`, `Sidebar/`, `CommandPalette/`
+- kebab-case for utility/feature folders: `live-collaboration/`, `welcome-screen/`, `drop-down-menu/`
+
+## Tests
+
+- Colocated with source for components: `Sidebar/Sidebar.test.tsx`
+- Separate `tests/` folder for utility packages: `packages/element/tests/`
+- Naming: `{FileName}.test.ts(x)`
+- Framework: Vitest with jsdom environment
+
+## Exports & Imports
+
+- Barrel exports via `index.ts` in each package (`export * from "./module"`)
+- Re-export types with `export type { ... }`
+- Cross-package: use `@excalidraw/*` aliases, not relative paths
+
+## How to verify
+
+- `yarn test:typecheck` — confirms strict mode compliance, no type errors
+- `yarn test:code` — ESLint enforces import ordering, `import type` usage, and restricted imports
+- `yarn test:other` — Prettier validates formatting
+- `grep -rn "export default" packages/excalidraw/components/ | head -20` — check default exports are only on main components
+- `grep -rn "from '\.\./\.\./\.\./packages/" packages/` — must return nothing (no relative cross-package imports)

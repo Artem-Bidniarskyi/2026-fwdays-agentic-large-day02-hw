@@ -1,0 +1,63 @@
+---
+description: "Performance rules for canvas rendering, state updates, caching, and event handling"
+globs: "packages/excalidraw/components/**,packages/excalidraw/renderer/**,packages/excalidraw/scene/**,packages/element/src/**"
+alwaysApply: false
+---
+
+# Performance Rules
+
+## Element Lookups
+
+- Use `elementsMap.get(id)` (O(1) Map lookup) — NEVER `array.find()` or `array.filter()` for element access
+- Use `scene.getNonDeletedElementsMap()` for the cached non-deleted elements map
+- Use `scene.getElement(id)` which uses the map internally
+
+## Rendering & Throttling
+
+- Static scene rendering is throttled via `renderStaticSceneThrottled` (`throttleRAF`) — do not add additional render calls
+- Use `throttleRAF(fn)` from `@excalidraw/common` for any high-frequency callback (pointer moves, scroll, resize)
+- Batch React state updates with `withBatchedUpdatesThrottled` from `reactUtils.ts` — combines `unstable_batchedUpdates` + `throttleRAF`
+- Never trigger synchronous re-renders from pointer/mouse event handlers
+
+## Cache Invalidation
+
+- Scene mutations automatically bump `sceneNonce` (random integer) — use it as the cache-busting signal
+- `Renderer.getRenderableElements()` is memoized and keyed on `sceneNonce` — do not bypass this
+- `ShapeCache` uses WeakMap keyed on element references — no manual cleanup needed
+- Image cache (`imageCache`) stores loading promises to prevent duplicate fetches
+
+## Memoization
+
+- Use `React.memo` with custom comparators for expensive UI components (see LayerUI pattern)
+- Use the project's `memoize()` from `@excalidraw/common` for function-level memoization — not `useMemo` for scene-level caching
+- Selected elements are cached with multi-level hashing in `Scene.getSelectedElements()` — do not recompute manually
+- `ShapeCache` (WeakMap) caches RoughJS shapes per element — invalidated automatically on mutation
+
+## Event Handlers
+
+- Pointer events use the Emitter pattern (`onPointerDownEmitter`, `onPointerUpEmitter`) — not direct React state updates
+- Dynamic event listeners are added on `pointerdown` and removed on `pointerup` — do not add permanent `pointermove` listeners on window
+- Store intermediate coordinates in instance variables (`this.lastPointerMoveCoords`), not React state
+
+## Code Splitting & Lazy Loading
+
+- Heavy modules (Mermaid, CodeMirror, font subsetting) are loaded via dynamic `import()` — follow this pattern for new heavy deps
+- Use `*.chunk.ts` naming for esbuild split points
+- Locale JSON files are lazy-loaded per language code
+- Use `WorkerPool` from `packages/excalidraw/workers.ts` for CPU-intensive tasks (auto-manages lifecycle with TTL)
+
+## Forbidden Patterns
+
+- No `array.find(el => el.id === id)` when `elementsMap` is available
+- No synchronous heavy computation inside render paths or pointer handlers
+- No `setInterval` for animations — use `AnimationFrameHandler` or `AnimationController`
+- No permanent `window.addEventListener("pointermove", ...)` — use dynamic add/remove pattern
+- No creating new Map/Set/Array on every render — cache or memoize
+
+## How to verify
+
+- `yarn test:app --watch=false` — confirms rendering pipeline performance tests pass
+- `grep -rn "\.find(\|\.filter(" packages/excalidraw/renderer/ packages/excalidraw/scene/` — audit for array scans where Map lookup is possible
+- `grep -rn "setInterval" packages/excalidraw/` — should only appear in controlled contexts, not for animations
+- `grep -rn "addEventListener.*pointermove" packages/excalidraw/components/App.tsx` — verify dynamic add/remove pattern
+- Check bundle size: `yarn build:packages` should not significantly increase dist size

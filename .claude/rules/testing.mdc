@@ -1,0 +1,73 @@
+Cope---
+description: "Testing conventions and patterns for Excalidraw"
+globs: "packages/**/*.test.ts,packages/**/*.test.tsx"
+alwaysApply: false
+---
+
+# Testing Conventions
+
+## Framework & Setup
+
+- Vitest with jsdom environment — globals enabled (no imports needed for describe/it/test)
+- Setup file: `setupTests.ts` (canvas mock, FontFace, IndexedDB, matchMedia, clipboard polyfills)
+- Canvas mocked via `vitest-canvas-mock` — do NOT test actual pixel output
+- Use `reseed(n)` for deterministic random IDs in tests
+
+## Rendering Components
+
+- Use custom `render()` from `packages/excalidraw/tests/test-utils.ts` — NOT raw `@testing-library/react`
+- Always `await render(<Excalidraw />)` — it waits for canvas initialization
+- Clean up with `unmountComponent()` in `beforeEach`
+- Access state via `GlobalTestState.canvas`, `GlobalTestState.interactiveCanvas`
+
+## Creating Elements
+
+- Use `API.createElement({ type, x, y, width, height, ... })` from `tests/helpers/api.ts`
+- Specialized helpers: `API.createTextContainer()`, `API.createLabeledArrow()`
+- Set scene: `API.setElements([...])`, `API.setSelectedElements([...])`
+- Update state: `API.setAppState(...)`, `API.updateScene(...)`
+
+## Simulating User Input
+
+- Mouse/touch: `new Pointer("mouse")` / `new Pointer("touch", id)` from `tests/helpers/ui.ts`
+  - Relative: `mouse.move(dx, dy)`, `mouse.down()`, `mouse.up()`, `mouse.click()`
+  - Absolute: `mouse.moveTo(x, y)`, `mouse.clickAt(x, y)`, `mouse.clickOn(element)`
+- Keyboard: `Keyboard.keyPress(key)`, `Keyboard.undo()`, `Keyboard.redo()`
+  - Modifiers: `Keyboard.withModifierKeys({ shift: true }, () => { ... })`
+- Tools: `UI.clickTool("rectangle")`, `UI.createElement("rectangle", { position, size })`
+
+## Assertions
+
+- `assertSelectedElements(id1, id2)` or `assertSelectedElements([el1, el2])`
+- `assertElements(actual, [{ type, x, y, selected: true }])` for structural comparison
+- `checkpointHistory(h.history, "label")` for undo/redo stack snapshots
+- Custom matcher: `expect(val).toBeNonNaNNumber()`
+
+## Mocking & Spying
+
+- Spy on renderers: `vi.spyOn(StaticScene, "renderStaticScene")`
+- Mock modules: `vi.mock("@excalidraw/common", async (importOriginal) => ...)`
+- Mock canvas dimensions: `mockBoundingClientRect({ width, height, x, y })`
+- Mock images: `mockHTMLImageElement(width, height)`
+- Clear mocks in `beforeEach`, NOT globally
+
+## Snapshots
+
+- Used extensively for render call counts, appState, elements, and history
+- Snapshot precision: IEEE754 floats serialized to 5 decimal places
+- Update with `yarn test:update`
+
+## Test Commands
+
+- `yarn test` — run all tests
+- `yarn test:coverage` — run with coverage (thresholds: 60% lines, 70% branches, 63% functions)
+- `yarn test:ui` — Vitest UI dashboard
+- `yarn test:update` — update snapshots
+
+## How to verify
+
+- `yarn test:app --watch=false` — all tests pass
+- `yarn test:coverage` — coverage meets thresholds (60% lines, 70% branches, 63% functions)
+- `grep -rn "from '@testing-library/react'" packages/excalidraw/tests/` — should only appear in test-utils.ts, not in individual tests
+- `grep -rn "render(<" packages/excalidraw/tests/ | grep -v test-utils | grep -v "from.*test-utils"` — verify tests use the custom render
+- `git diff --name-only | grep "\.test\."` — confirm changed code has corresponding test updates

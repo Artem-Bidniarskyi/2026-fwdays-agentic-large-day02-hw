@@ -1,0 +1,29 @@
+---
+description: "Protected files that should not be modified"
+globs: "packages/excalidraw/**"
+alwaysApply: true
+---
+
+# Protected Files
+
+NEVER modify these files without explicit approval:
+
+- `packages/excalidraw/scene/Renderer.ts` — render pipeline orchestrator
+- `packages/excalidraw/renderer/staticScene.ts` — static canvas rendering
+- `packages/excalidraw/renderer/interactiveScene.ts` — interactive canvas rendering
+- `packages/excalidraw/data/restore.ts` — file format compatibility
+- `packages/excalidraw/actions/manager.tsx` — action system dispatcher
+- `packages/excalidraw/types.ts` — core types (AppState, etc.)
+- `packages/element/src/Scene.ts` — element store and scene management
+
+Changes to protected files require:
+
+1. Full understanding of downstream dependencies
+2. Running complete test suite (`vitest run`)
+3. Manual QA verification
+
+## How to verify
+
+- `git diff --name-only` — check none of the protected files appear in uncommitted changes
+- `git diff HEAD~1 --name-only` — check last commit didn't modify protected files without approval
+- If a protected file was modified: `yarn test:all` must pass, and `yarn build:packages` must succeed

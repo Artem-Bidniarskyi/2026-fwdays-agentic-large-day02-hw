@@ -1,0 +1,66 @@
+---
+description: "Security rules for handling URLs, user input, embeds, file imports, and encryption"
+globs: "packages/excalidraw/data/**,packages/common/src/url.ts,packages/element/src/embeddable.ts,excalidraw-app/**"
+alwaysApply: false
+---
+
+# Security Rules
+
+## URL Handling
+
+- ALL user-provided URLs must pass through `normalizeLink()` from `@excalidraw/common` (uses @braintree/sanitize-url)
+- For URL validation use `toValidURL()` — returns `"about:blank"` for invalid URLs
+- Never construct href attributes from raw user input
+- Source: `packages/common/src/url.ts`
+
+## Embeddable Content & Iframes
+
+- Embeddable URLs are validated against a strict domain whitelist in `packages/element/src/embeddable.ts`
+- Do NOT add domains to `ALLOWED_DOMAINS` or `ALLOW_SAME_ORIGIN` without explicit security review
+- Iframe srcdoc content must use `escapeDoubleQuotes()` for embedded URLs
+- Always specify `targetOrigin` in `postMessage()` calls — never use `"*"`
+- Validate `event.origin` on all `message` event handlers
+
+## SVG Export
+
+- Use proper DOM APIs (`createElementNS` with `SVG_NS`) — never string concatenation or innerHTML for SVG
+- Sanitize all link hrefs with `normalizeLink()` before embedding in SVG output
+- Validate embed links via `getEmbedLink()` with domain whitelist before rendering
+- Source: `packages/excalidraw/renderer/staticSvgScene.ts`
+
+## File Import & Images
+
+- Validate actual MIME types by checking file magic bytes (`getActualMimeTypeFromImage()`) — do not trust file extensions alone
+- Use `isSupportedImageFile()` guard before processing any image
+- Validate Excalidraw data structure with `isValidExcalidrawData()` before restoring
+- Library URLs are restricted to the whitelist in `packages/excalidraw/data/library.ts` — do not bypass `validateLibraryUrl()`
+- Source: `packages/excalidraw/data/blob.ts`, `packages/excalidraw/data/image.ts`
+
+## Encryption
+
+- Use AES-GCM via Web Crypto API (`packages/excalidraw/data/encryption.ts`) — do not introduce custom crypto
+- IVs must be generated with `crypto.getRandomValues()`, never reused
+- Do not change `ENCRYPTION_KEY_BITS` (128) without security review
+
+## Forbidden Patterns
+
+- No `eval()`, `new Function()`, or `document.write()`
+- No `dangerouslySetInnerHTML` with user-provided content (existing QRCode usage is safe — internally generated SVG only)
+- No `innerHTML` with user-controlled strings
+- No disabling of iframe sandbox attributes
+- No `postMessage` with `targetOrigin: "*"`
+
+## Environment & Secrets
+
+- Never commit `.env` files with private keys or credentials
+- Firebase config and RSA public keys in `.env.*` are intentionally public (client-side)
+- Do NOT add server-side secrets to `.env.production` or `.env.development`
+
+## How to verify
+
+- `grep -rn "eval\b\|new Function\|document\.write" packages/ --include="*.ts" --include="*.tsx"` — must return nothing
+- `grep -rn "dangerouslySetInnerHTML" packages/ --include="*.tsx"` — only QRCode.tsx (internally generated SVG)
+- `grep -rn "innerHTML" packages/ --include="*.ts" --include="*.tsx"` — audit each usage for user-controlled input
+- `grep -rn "targetOrigin.*\*" packages/ excalidraw-app/` — must return nothing (no wildcard postMessage)
+- `grep -rn "normalizeLink\|toValidURL" packages/excalidraw/renderer/` — confirm SVG export sanitizes URLs
+- `yarn test:app --watch=false` — URL sanitization tests in `packages/common/tests/url.test.tsx` pass
